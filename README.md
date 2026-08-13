@@ -3,7 +3,7 @@
 
 A social diary for video games.
 
-Kridavana is a Letterboxd-inspired platform for discovering, logging, rating, reviewing, and organizing the games you play.
+Kridavana is a platform for discovering, logging, rating, reviewing, and organizing the games you play.
 
 ## Features
 
