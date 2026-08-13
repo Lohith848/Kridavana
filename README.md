@@ -1,178 +1,158 @@
 
-Kridavana
+# Kridavana
 
 A social diary for video games.
 
-Kridavana is a Letterboxd-inspired platform for discovering, tracking, rating, reviewing, and organizing the games you play.
+Kridavana is a Letterboxd-inspired platform for discovering, logging, rating, reviewing, and organizing the games you play.
 
----
+## Features
 
-Overview
-
-Kridavana lets you build a personal history of your gaming life.
-
-Track games you've played, rate them out of 10, write reviews, maintain a watchlist, create ranked lists, and interact with other players through likes and comments.
-
----
-
-Features
-
-- Game diary and play history
-- Ratings from 1–10
-- Reviews and community discussions
-- Personal watchlist
-- Custom ranked lists
+- Game diary
+- Ratings out of 10
+- Reviews
+- Watchlist
+- Ranked lists
 - Likes and comments
-- Gaming statistics
-- Email authentication with OTP verification
-- Game discovery powered by TheGamesDB
+- Personal gaming statistics
+- Email OTP verification
 
----
+## Tech Stack
 
-Stack
+| Technology | Purpose |
+|---|---|
+| Next.js 14 | Application framework |
+| TypeScript | Type safety |
+| Tailwind CSS | Styling |
+| Supabase | Database and authentication |
+| TheGamesDB | Game data and metadata |
 
-Layer| Technology
-Framework| Next.js 14
-Language| TypeScript
-Styling| Tailwind CSS
-Database| PostgreSQL
-Authentication| Supabase Auth
-Game Data| TheGamesDB
-Deployment| Vercel
+## Getting Started
 
----
+### 1. Clone and install
 
-Getting Started
-
-Requirements
-
-- Node.js
-- npm
-- Supabase project
-- TheGamesDB API key
-
-Installation
-
+```bash
 git clone <repository-url>
 cd kridavana
 npm install
+```
 
-Environment
+### 2. Configure Supabase
 
-Create ".env.local":
+Create a project at https://supabase.com.
 
+Run the database schema from:
+
+```text
+supabase/schema.sql
+```
+
+If you are upgrading an existing database, run:
+
+```text
+supabase/migrations/001_thegamesdb.sql
+```
+
+The migration preserves existing diaries, reviews, watchlists, and lists.
+
+In Supabase Authentication, enable:
+
+- Email
+- Password
+- Confirm email
+
+Copy the project URL and public/anon key from the Supabase API settings.
+
+### 3. Configure email OTP
+
+Kridavana uses a six-digit email OTP instead of a confirmation link.
+
+In:
+
+```text
+Supabase → Authentication → Emails → Templates → Confirm signup
+```
+
+use the following template:
+
+```html
+<h2>Kridavana</h2>
+<p>Verify your email</p>
+<p>Your verification code is:</p>
+<h1 style="letter-spacing: 4px;">{{ .Token }}</h1>
+<p>Enter this code in Kridavana to verify your account.</p>
+<p>If you didn't create a Kridavana account, you can ignore this email.</p>
+```
+
+Supabase generates and validates the OTP. Kridavana does not store verification codes.
+
+### 4. Configure TheGamesDB
+
+Create an account at https://thegamesdb.net and generate an API key.
+
+The key is used only on the server and must never be exposed to the browser.
+
+### 5. Environment variables
+
+Create `.env.local`:
+
+```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 THEGAMESDB_API_KEY=your_thegamesdb_api_key
+```
 
-The TheGamesDB key is server-side only and must never use the "NEXT_PUBLIC_" prefix.
+Do not prefix `THEGAMESDB_API_KEY` with `NEXT_PUBLIC_`.
 
----
+### 6. Run locally
 
-Database
-
-Create a Supabase project and run:
-
-supabase/schema.sql
-
-For existing installations, use:
-
-supabase/migrations/001_thegamesdb.sql
-
-The migration updates the game-data structure without removing existing diaries, reviews, watchlists, or lists.
-
----
-
-Authentication
-
-Kridavana uses Supabase Authentication with email and password.
-
-New accounts are verified using a 6-digit email OTP rather than a confirmation link.
-
-Configure the following in Supabase:
-
-Authentication
-└── Emails
-    └── Templates
-        └── Confirm signup
-
-Use "{{ .Token }}" in the email template to display the verification code.
-
-OTP generation and verification are handled by Supabase Auth. Kridavana does not store verification codes.
-
----
-
-Game Data
-
-Kridavana uses TheGamesDB for game metadata.
-
-The API is accessed exclusively from the server through:
-
-lib/thegamesdb.ts
-
-This keeps the API key out of the client and allows the game-data layer to be replaced independently from the rest of the application.
-
----
-
-Development
-
-Start the development server:
-
+```bash
 npm run dev
+```
 
-Then open:
+Open:
 
+```text
 http://localhost:3000
+```
 
----
+Create an account, verify your email, and start logging games.
 
-Project Structure
+## Project Structure
 
-kridavana/
-├── app/
-│   ├── login/
-│   ├── signup/
-│   ├── verify-email/
-│   └── ...
-│
-├── lib/
-│   ├── supabase/
-│   └── thegamesdb.ts
-│
+```text
+app/
+├── page.tsx
+├── login/
+│   └── page.tsx
+├── signup/
+│   └── page.tsx
+└── verify-email/
+    └── page.tsx
+
+lib/
 ├── supabase/
-│   ├── schema.sql
-│   └── migrations/
-│
-├── public/
-├── .env.example
-├── package.json
-└── README.md
+└── thegamesdb.ts
 
----
+supabase/
+├── schema.sql
+└── migrations/
+    └── 001_thegamesdb.sql
+```
 
-Deployment
+## Deployment
 
-Kridavana is designed to run on Vercel.
+Kridavana is designed to deploy on Vercel.
 
 1. Push the repository to GitHub.
-2. Import the project into Vercel.
+2. Import the repository into Vercel.
 3. Add the required environment variables.
 4. Deploy.
 
----
+## Status
 
-Vision
+Kridavana is currently under active development.
 
-Kridavana is built around a simple idea:
+## License
 
-«Your gaming history deserves to be remembered.»
+Private project.
 
-Not just what you played, but what you thought about it.
-
----
-
-Status
-
-In development
-
-More features and community functionality are actively being built.
