@@ -152,7 +152,7 @@ Kridavana is designed to deploy on Vercel.
 
 Kridavana is currently under active development.
 
-## License
+## Author
 
-Private project.
+LOHITH G
 
