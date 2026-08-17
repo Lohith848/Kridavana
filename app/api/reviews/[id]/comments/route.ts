@@ -33,14 +33,21 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!user) return NextResponse.json({ error: 'Sign in to comment.' }, { status: 401 });
 
   const reviewId = Number(params.id);
-  const { body } = await req.json();
-  if (!body || body.trim().length === 0) {
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+  }
+
+  const commentBody = typeof parsed.body === 'string' ? parsed.body.trim() : '';
+  if (commentBody.length === 0) {
     return NextResponse.json({ error: 'Comment cannot be empty.' }, { status: 400 });
   }
 
   const { data, error } = await supabase
     .from('review_comments')
-    .insert({ review_id: reviewId, user_id: user.id, body: body.trim().slice(0, 1000) })
+    .insert({ review_id: reviewId, user_id: user.id, body: commentBody.slice(0, 1000) })
     .select('id, body, created_at, profiles(username)')
     .single();
 
@@ -56,3 +63,4 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   });
 }
+

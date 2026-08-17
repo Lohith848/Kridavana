@@ -12,8 +12,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Sign in to log a game.' }, { status: 401 });
   }
 
-  const body = await req.json();
-  const { thegamesdb_id, status, platform, rating, review, hours_played, started_on, finished_on, log_id } = body;
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+  }
+
+  const { thegamesdb_id, status, platform, rating, review, hours_played, started_on, finished_on, log_id } = body as any;
 
   const { data: game, error: gameError } = await supabase
     .from('games')
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
   // and/or a written review. Comment/like counts survive edits because we
   // upsert on (user_id, game_id) instead of deleting.
   if (rating != null || (review && review.trim().length > 0)) {
-    await supabase.from('reviews').upsert(
+    const { error: upsertError } = await supabase.from('reviews').upsert(
       {
         user_id: user.id,
         game_id: game.id,
@@ -60,6 +66,10 @@ export async function POST(req: NextRequest) {
       },
       { onConflict: 'user_id,game_id' }
     );
+    if (upsertError) {
+      // Log but don't fail the request — the log itself was saved successfully
+      console.error('Review upsert failed:', upsertError);
+    }
   }
 
   return NextResponse.json({ log: data });

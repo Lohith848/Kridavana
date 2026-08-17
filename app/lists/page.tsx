@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
+import { Plus, Pin } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MotionDiv, MotionSection } from '@/components/ui/motion';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,36 +21,75 @@ export default async function ListsPage() {
 
   return (
     <div className="space-y-10">
-      <div className="flex items-center justify-between">
+      <MotionDiv
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+      >
         <div>
-          <h1 className="font-display text-2xl font-medium">Lists</h1>
-          <p className="mt-1 text-sm text-muted">Rank your favorites, curate anything.</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-cream">Lists</h1>
+          <p className="mt-1 font-body text-sm text-muted">Rank your favorites, curate anything.</p>
         </div>
-        <Link
-          href="/lists/new"
-          className="rounded-card border border-accent/40 bg-accent/10 px-4 py-2 font-mono text-sm text-accent hover:bg-accent/20"
-        >
-          + New list
+        <Link href="/lists/new">
+          <Button variant="primary" size="sm">
+            <Plus className="h-4 w-4" />
+            <span>New list</span>
+          </Button>
         </Link>
-      </div>
+      </MotionDiv>
 
       {pinned.length > 0 && (
-        <section>
-          <h2 className="mb-3 font-display text-sm uppercase tracking-wide text-muted">Pinned</h2>
+        <MotionSection
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: { staggerChildren: 0.05 }
+            }
+          }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Pin className="h-3.5 w-3.5 text-amber" />
+            <h2 className="font-display text-xs uppercase tracking-wider text-muted">Pinned</h2>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {pinned.map((l) => (
-              <ListCard key={l.id} list={l} />
+              <MotionDiv
+                key={l.id}
+                variants={{
+                  hidden: { opacity: 0, y: 12 },
+                  show: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+                }}
+              >
+                <ListCard list={l} />
+              </MotionDiv>
             ))}
           </div>
-        </section>
+        </MotionSection>
       )}
 
-      <section>
-        <h2 className="mb-3 font-display text-sm uppercase tracking-wide text-muted">Your lists</h2>
+      <MotionSection
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1, duration: 0.5 }}
+      >
+        <h2 className="font-display text-xs uppercase tracking-wider text-muted mb-4">Your lists</h2>
         {custom.length === 0 ? (
-          <p className="rounded-card border border-dashed border-border p-8 text-center text-sm text-muted">
-            No lists yet — start with your Best 100 or a themed list of your own.
-          </p>
+          <EmptyState
+            title="No lists yet."
+            description="Start with your Best 100 or a themed list of your own."
+            action={
+              <Link href="/lists/new">
+                <Button variant="primary" size="sm">
+                  <Plus className="h-4 w-4" />
+                  <span>Create a list</span>
+                </Button>
+              </Link>
+            }
+          />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {custom.map((l) => (
@@ -54,7 +97,7 @@ export default async function ListsPage() {
             ))}
           </div>
         )}
-      </section>
+      </MotionSection>
     </div>
   );
 }
@@ -64,11 +107,15 @@ function ListCard({ list }: { list: any }) {
   return (
     <Link
       href={`/lists/${list.id}`}
-      className="rounded-card border border-border bg-surface p-4 hover:border-accent/40"
+      className="group flex flex-col justify-between rounded-card border border-hairline bg-surface p-5 transition-all duration-200 hover:border-amber/40 hover:shadow-card"
     >
-      <p className="font-display text-base text-text">{list.name}</p>
-      {list.description && <p className="mt-1 text-sm text-muted">{list.description}</p>}
-      <p className="mt-2 font-mono text-xs text-muted">{count} game{count === 1 ? '' : 's'}</p>
+      <div>
+        <p className="font-display text-base font-medium text-cream group-hover:text-amber transition-colors">{list.name}</p>
+        {list.description && <p className="mt-1.5 font-body text-sm text-muted line-clamp-2">{list.description}</p>}
+      </div>
+      <p className="mt-3 font-mono text-xs font-medium text-amber">
+        {count} {count === 1 ? 'game' : 'games'}
+      </p>
     </Link>
   );
 }

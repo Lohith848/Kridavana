@@ -6,8 +6,9 @@
 // ever leaks into the UI. Swapping providers later means rewriting only this
 // file (plus the games table's external id column).
 
+import { imageUrl, pickCoverCandidates, pickBestVerifiedUrl, type TdbImageEntry } from './thegamesdb-images';
+
 const BASE = 'https://api.thegamesdb.net/v1';
-const IMAGE_BASE = 'https://cdn.thegamesdb.net/images/original/';
 
 // ---------------------------------------------------------------------------
 // Kridavana's internal game model (also mirrors the `games` table)
@@ -46,16 +47,6 @@ type TdbGame = {
   last_updated?: string;
 };
 
-type TdbImageEntry = {
-  id?: number;
-  type?: string;
-  side?: string | null;
-  filename?: string;
-  url?: string;
-  resolution?: string | null;
-  rating?: string | null;
-};
-
 type TdbVideoEntry = {
   id: number;
   name: string;
@@ -78,7 +69,7 @@ type TdbResponse = {
     pages?: number;
     games?: TdbGame[];
     base_url?: { original?: string; thumb?: string };
-    images?: Record<string, Record<string, unknown>>;
+    images?: Record<string, TdbImageEntry[]>;
     videos?: Record<string, TdbVideoEntry[]>;
   };
   include?: TdbInclude;
@@ -112,114 +103,47 @@ async function tdbGet(path: string, params: Record<string, string | number>): Pr
     throw new Error(`TheGamesDB request to ${path} failed: ${res.status}`);
   }
 
-  return res.json();
-}
-
-// ---------------------------------------------------------------------------
-// Image helpers
-// ---------------------------------------------------------------------------
-export function imageUrl(filename?: string | null): string | null {
-  if (!filename) return null;
-  if (filename.startsWith('http')) return filename;
-  return `${IMAGE_BASE}${filename}`;
-}
-
-/** Best poster: front boxart, then fanart, then banner, then screenshot. */
-function pickCover(images: Record<string, unknown> | undefined): string | null {
-  if (!images) return null;
-
-  const boxart = images.boxart as
-    | { front?: TdbImageEntry; back?: TdbImageEntry }
-    | undefined;
-  if (boxart?.front?.url) return imageUrl(boxart.front.url);
-  if (boxart?.back?.url) return imageUrl(boxart.back.url);
-
-  for (const type of ['fanart', 'banner', 'screenshot'] as const) {
-    const list = images[type] as TdbImageEntry[] | undefined;
-    const first = Array.isArray(list) ? list[0] : undefined;
-    if (first?.url) return imageUrl(first.url);
-    if (first?.filename) return imageUrl(first.filename);
+  try {
+    return await res.json();
+  } catch {
+    throw new Error(`TheGamesDB returned an unreadable response from ${path}.`);
   }
-
-  return null;
-}
-
-/** First available fanart/banner for a wide hero image. */
-function pickBackground(images: Record<string, unknown> | undefined): string | null {
-  if (!images) return null;
-  for (const type of ['fanart', 'banner'] as const) {
-    const list = images[type] as TdbImageEntry[] | undefined;
-    const first = Array.isArray(list) ? list[0] : undefined;
-    if (first?.url) return imageUrl(first.url);
-    if (first?.filename) return imageUrl(first.filename);
-  }
-  return null;
 }
 
 // ---------------------------------------------------------------------------
-// Public adapter API
+// Image caching (in-process) — avoids duplicate /Games/Images requests
 // ---------------------------------------------------------------------------
+const imageCache = new Map<number, { at: number; entries: TdbImageEntry[]; baseUrl?: string }>();
+const IMAGE_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
 /**
- * Search games by name. Returns normalized results (no pagination needed for
- * the search dropdown — the API defaults to a reasonable page).
+ * Raw image set for a game from /Games/Images.
+ * The endpoint returns one flat array of entries per game id:
+ *   data.images[id] = [{ type: 'boxart', side: 'front', filename }, …]
  */
-export async function searchGames(query: string, limit = 20): Promise<Game[]> {
-  const data = await tdbGet('/Games/ByGameName', {
-    name: query,
-    fields: 'players,publishers,genres,overview,rating,platform,youtube',
-    include: 'boxart,platform,genres,developers,publishers'
-  });
+export async function getGameImages(id: number): Promise<{ entries: TdbImageEntry[]; baseUrl?: string } | null> {
+  const cached = imageCache.get(id);
+  if (cached && Date.now() - cached.at < IMAGE_CACHE_TTL) return cached;
 
-  const games = data.data?.games ?? [];
-  const include = data.include ?? {};
-
-  return games.slice(0, limit).map((g) => normalize(g, include));
-}
-
-/** Fetch detailed game info (overview + genres + platforms + images + trailer). */
-export async function getGameById(id: number): Promise<Game | null> {
-  const [detail, images, videos] = await Promise.allSettled([
-    tdbGet('/Games/ByGameID', {
-      id,
-      fields: 'players,publishers,genres,overview,rating,platform,youtube',
-      include: 'platform,genres,developers,publishers'
-    }),
-    getGameImages(id),
-    getGameVideos(id)
-  ]);
-
-  if (detail.status !== 'fulfilled') return null;
-  const game = detail.value.data?.games?.[0];
-  if (!game) return null;
-
-  const normalized = normalize(game, detail.value.include ?? {});
-
-  // images / videos are best-effort — never fail the page because of them
-  const imageData =
-    images.status === 'fulfilled' && images.value
-      ? (images.value as Record<string, unknown>)
-      : undefined;
-  const videoData = videos.status === 'fulfilled' ? videos.value : undefined;
-
-  return {
-    ...normalized,
-    cover_url: normalized.cover_url ?? pickCover(imageData),
-    youtube: normalized.youtube ?? videoData?.youtube ?? null
-  };
-}
-
-/** Raw image set for a game (internal; used by getGameById). */
-export async function getGameImages(id: number): Promise<Record<string, unknown> | null> {
   const data = await tdbGet('/Games/Images', { games_id: id });
-  const images = data.data?.images?.[String(id)] ?? data.data?.images?.[id];
-  if (!images) return null;
-  // attach the full cover/background URLs to a normalized shape
-  return {
-    ...images,
-    cover_url: pickCover(images as Record<string, unknown>),
-    background_url: pickBackground(images as Record<string, unknown>)
-  };
+  const entries = data.data?.images?.[String(id)];
+
+  if (!Array.isArray(entries) || entries.length === 0) {
+    console.warn(`[thegamesdb] no images found for game ${id}`);
+    imageCache.set(id, { at: Date.now(), entries: [] });
+    return null;
+  }
+
+  const baseUrl = data.data?.base_url?.original;
+  console.log(
+    `[thegamesdb] images #${id}: ${entries.length} entries` +
+      ` (${[...new Set(entries.map((e) => e.type))].join(', ')})` +
+      `, base_url ${baseUrl ?? 'default'}`
+  );
+
+  const result = { entries, baseUrl };
+  imageCache.set(id, { at: Date.now(), ...result });
+  return result;
 }
 
 /** Trailer info for a game (internal; used by getGameById). */
@@ -231,6 +155,73 @@ export async function getGameVideos(id: number): Promise<{ youtube: string | nul
 }
 
 // ---------------------------------------------------------------------------
+// Public adapter API
+// ---------------------------------------------------------------------------
+
+/**
+ * Search games by name. Returns normalized results (no pagination needed for
+ * the search dropdown — the API defaults to a reasonable page).
+ * Covers come straight from the response's boxart include (fast path).
+ */
+export async function searchGames(query: string, limit = 20): Promise<Game[]> {
+  const data = await tdbGet('/Games/ByGameName', {
+    name: query,
+    fields: 'players,publishers,genres,overview,rating,platform,youtube',
+    include: 'boxart,platform,genres,developers,publishers'
+  });
+
+  const games = data.data?.games ?? [];
+  const include = data.include ?? {};
+
+  const results = games.slice(0, limit).map((g) => normalize(g, include));
+
+  const sample = results.find((r) => r.cover_url);
+  console.log(
+    `[thegamesdb] search "${query}": ${results.length} results` +
+      (sample ? `, e.g. "${sample.name}" cover ${sample.cover_url}` : ', no covers in include')
+  );
+
+  return results;
+}
+
+/** Fetch detailed game info (overview + genres + platforms + images + trailer). */
+export async function getGameById(id: number): Promise<Game | null> {
+  const [detail, images, videos] = await Promise.allSettled([
+    tdbGet('/Games/ByGameID', {
+      id,
+      fields: 'players,publishers,genres,overview,rating,platform,youtube',
+      include: 'boxart,platform,genres,developers,publishers'
+    }),
+    getGameImages(id),
+    getGameVideos(id)
+  ]);
+
+  if (detail.status !== 'fulfilled') return null;
+  const game = detail.value.data?.games?.[0];
+  if (!game) return null;
+
+  const normalized = normalize(game, detail.value.include ?? {});
+
+  // Images / videos are best-effort — never fail the page because of them.
+  const imageResult = images.status === 'fulfilled' ? images.value : null;
+  const videoData = videos.status === 'fulfilled' ? videos.value : undefined;
+
+  // Cover: prefer the boxart that came with ByGameID (fast path), otherwise
+  // pull from /Games/Images. Either way, verify the URL and walk the fallback
+  // chain (front boxart → back → fanart → banner → screenshot) on a 404.
+  const candidates = normalized.cover_url
+    ? [normalized.cover_url]
+    : pickCoverCandidates(imageResult?.entries ?? undefined);
+  const coverUrl = await pickBestVerifiedUrl(candidates, imageResult?.baseUrl, `cover #${id}`);
+
+  return {
+    ...normalized,
+    cover_url: coverUrl,
+    youtube: normalized.youtube ?? videoData?.youtube ?? null
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Normalization: TheGamesDB → Kridavana Game
 // ---------------------------------------------------------------------------
 function normalize(g: TdbGame, include: TdbInclude): Game {
@@ -239,14 +230,17 @@ function normalize(g: TdbGame, include: TdbInclude): Game {
   const developers = (g.developers ?? []).map((id) => include.developers?.data?.[String(id)]?.name ?? '').filter(Boolean);
   const publishers = (g.publishers ?? []).map((id) => include.publishers?.data?.[String(id)]?.name ?? '').filter(Boolean);
 
-  const boxart = include.boxart?.data?.[String(g.id)];
-  const front = Array.isArray(boxart) ? boxart.find((b) => b.side === 'front') : undefined;
+  // include.boxart.data[gameId] is a flat array of { type, side, filename } —
+  // pick the best poster (front boxart first) and resolve it against the
+  // base_url that ships with the include.
+  const boxartEntries = include.boxart?.data?.[String(g.id)];
+  const cover = pickCoverCandidates(boxartEntries)[0];
 
   return {
     id: g.id,
     name: g.game_title ?? `Game ${g.id}`,
     summary: g.overview?.trim() || null,
-    cover_url: front ? imageUrl(front.filename) : null,
+    cover_url: cover ? imageUrl(cover, include.boxart?.base_url?.original) : null,
     first_release_date: g.release_date || null,
     genres,
     platforms,

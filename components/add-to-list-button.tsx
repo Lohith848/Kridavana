@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ListPlus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 type ListOption = { id: number; name: string };
 
@@ -41,8 +44,8 @@ export default function AddToListButton({ gameId }: { gameId: number }) {
         body: JSON.stringify({ thegamesdb_id: gameId, list_id: listId })
       });
       if (res.ok) {
-        setAdded(`Added to “${name}”`);
-        setTimeout(() => setOpen(false), 1200);
+        setAdded(`Added to "${name}"`);
+        setTimeout(() => setOpen(false), 1500);
       }
     } finally {
       setBusy(false);
@@ -51,42 +54,52 @@ export default function AddToListButton({ gameId }: { gameId: number }) {
 
   return (
     <div className="relative" ref={ref}>
-      <button
+      <Button
         onClick={toggle}
-        className="rounded-card border border-border px-4 py-2 font-mono text-sm text-muted transition-colors hover:border-accent/40 hover:text-text"
+        variant="secondary"
+        size="sm"
       >
-        + Add to list
-      </button>
+        <ListPlus className="h-4 w-4" />
+        <span>Add to list</span>
+      </Button>
 
-      {open && (
-        <div className="absolute z-30 mt-2 w-64 rounded-card border border-border bg-surface p-2 shadow-xl">
-          {added ? (
-            <p className="px-2 py-2 text-sm text-accent">{added}</p>
-          ) : lists.length === 0 ? (
-            <div className="space-y-2 p-2">
-              <p className="text-sm text-muted">No lists yet.</p>
-              <Link
-                href="/lists/new"
-                className="block rounded bg-accent/10 px-3 py-1.5 font-mono text-xs text-accent hover:bg-accent/20"
-              >
-                + Create a list
-              </Link>
-            </div>
-          ) : (
-            <div className="max-h-56 space-y-0.5 overflow-y-auto">
-              {lists.map((l) => (
-                <button
-                  key={l.id}
-                  onClick={() => addToList(l.id, l.name)}
-                  className="block w-full truncate rounded px-3 py-1.5 text-left text-sm text-text hover:bg-surfaceRaised"
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="absolute z-30 mt-2 w-64 overflow-hidden rounded-card border border-hairline bg-surfaceRaised shadow-card-hover"
+          >
+            {added ? (
+              <p className="px-4 py-3 text-xs font-medium text-amber">{added}</p>
+            ) : lists.length === 0 ? (
+              <div className="p-3 space-y-2">
+                <p className="text-xs text-muted px-1">No lists yet.</p>
+                <Link
+                  href="/lists/new"
+                  className="block rounded-lg bg-amber/10 px-3 py-2 font-body text-xs font-medium text-amber hover:bg-amber/20 transition-colors"
                 >
-                  {l.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                  + Create a list
+                </Link>
+              </div>
+            ) : (
+              <div className="max-h-56 overflow-y-auto p-1.5">
+                {lists.map((l) => (
+                  <button
+                    key={l.id}
+                    onClick={() => addToList(l.id, l.name)}
+                    className="block w-full truncate rounded-lg px-3 py-2 text-left text-xs font-medium text-cream hover:bg-surface transition-colors"
+                  >
+                    {l.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

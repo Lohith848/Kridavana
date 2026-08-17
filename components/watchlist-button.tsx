@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import clsx from 'clsx';
+import { motion } from 'framer-motion';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export default function WatchlistButton({ gameId, initial }: { gameId: number; initial: boolean }) {
   const [onWatchlist, setOnWatchlist] = useState(initial);
@@ -26,17 +29,25 @@ export default function WatchlistButton({ gameId, initial }: { gameId: number; i
   }
 
   return (
-    <button
-      onClick={toggle}
-      disabled={busy}
-      className={clsx(
-        'rounded-card border px-4 py-2 font-mono text-sm transition-colors disabled:opacity-60',
-        onWatchlist
-          ? 'border-accent/40 bg-accent/10 text-accent hover:bg-accent/20'
-          : 'border-border text-muted hover:border-accent/40 hover:text-text'
-      )}
-    >
-      {onWatchlist ? '★ On watchlist' : '☆ Add to watchlist'}
-    </button>
+    <motion.div whileTap={{ scale: 0.97 }}>
+      <Button
+        onClick={toggle}
+        disabled={busy}
+        variant={onWatchlist ? "primary" : "secondary"}
+        size="sm"
+      >
+        {onWatchlist ? (
+          <>
+            <BookmarkCheck className="h-4 w-4" />
+            <span>On watchlist</span>
+          </>
+        ) : (
+          <>
+            <Bookmark className="h-4 w-4" />
+            <span>Add to watchlist</span>
+          </>
+        )}
+      </Button>
+    </motion.div>
   );
 }

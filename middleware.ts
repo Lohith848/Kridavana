@@ -1,7 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/signup', '/verify-email', '/auth/callback'];
+/** Auth pages — logged-in users should be redirected away from these to home. */
+const AUTH_PAGES = ['/login', '/verify-otp', '/verify-email'];
+
+/** Routes that strictly require a logged-in session. */
+const PROTECTED_ROUTES = ['/lists/new'];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } });
@@ -30,12 +34,23 @@ export async function middleware(request: NextRequest) {
     data: { user }
   } = await supabase.auth.getUser();
 
-  const isPublic = PUBLIC_PATHS.some((p) => request.nextUrl.pathname.startsWith(p));
+  const pathname = request.nextUrl.pathname;
+  const isAuthPage = AUTH_PAGES.some((p) => pathname.startsWith(p));
+  const isProtected = PROTECTED_ROUTES.some((p) => pathname.startsWith(p));
 
-  if (!user && !isPublic) {
+  // Unauthenticated user attempting to access a strictly protected route
+  if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('next', request.nextUrl.pathname);
+    url.searchParams.set('next', pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // Authenticated user hitting an auth page → redirect to home
+  if (user && isAuthPage) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/';
+    url.searchParams.delete('next');
     return NextResponse.redirect(url);
   }
 
@@ -45,3 +60,4 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
 };
+

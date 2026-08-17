@@ -2,7 +2,8 @@
 const nextConfig = {
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'cdn.thegamesdb.net' }
+      { protocol: 'https', hostname: 'cdn.thegamesdb.net' },
+      { protocol: 'https', hostname: 'legacy.thegamesdb.net' }
     ]
   }
 };

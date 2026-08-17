@@ -9,7 +9,14 @@ export async function POST(req: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Sign in to create lists.' }, { status: 401 });
 
-  const { name, description, is_ranked } = await req.json();
+  let body: Record<string, unknown>;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Invalid request body.' }, { status: 400 });
+  }
+
+  const { name, description, is_ranked } = body as any;
   if (!name || name.trim().length === 0) {
     return NextResponse.json({ error: 'Give the list a name.' }, { status: 400 });
   }

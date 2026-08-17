@@ -1,4 +1,3 @@
-
 # Kridavana
 
 A social diary for video games.
@@ -7,46 +6,46 @@ Kridavana is a platform for discovering, logging, rating, reviewing, and organiz
 
 ## Features
 
-- Game diary
+- Game diary (playing, completed, dropped, on hold, backlog, wishlist)
 - Ratings out of 10
-- Reviews
+- Reviews with likes and comments
 - Watchlist
-- Ranked lists
-- Likes and comments
-- Personal gaming statistics
-- Email OTP verification
+- Ranked and unranked lists
+- Personal gaming statistics (hours logged, average rating, games completed)
+- Passwordless sign-in via email OTP
+- Game metadata and posters from TheGamesDB
 
 ## Tech Stack
 
 | Technology | Purpose |
 |---|---|
-| Next.js 14 | Application framework |
+| Next.js 14 (App Router) | Application framework |
 | TypeScript | Type safety |
 | Tailwind CSS | Styling |
 | Supabase | Database and authentication |
-| TheGamesDB | Game data and metadata |
+| TheGamesDB | Game data, metadata, and posters |
 
 ## Getting Started
 
 ### 1. Clone and install
 
 ```bash
-git clone <repository-url>
-cd kridavana
+git clone https://github.com/Lohith848/Kridavana.git
+cd Kridavana
 npm install
 ```
 
-### 2. Configure Supabase
+### 2. Set up Supabase
 
 Create a project at https://supabase.com.
 
-Run the database schema from:
+Run the database schema:
 
 ```text
 supabase/schema.sql
 ```
 
-If you are upgrading an existing database, run:
+If you are upgrading an existing database, run the migration instead:
 
 ```text
 supabase/migrations/001_thegamesdb.sql
@@ -54,105 +53,57 @@ supabase/migrations/001_thegamesdb.sql
 
 The migration preserves existing diaries, reviews, watchlists, and lists.
 
-In Supabase Authentication, enable:
+#### Authentication (email OTP, no passwords)
 
-- Email
-- Password
-- Confirm email
+Kridavana uses **passwordless email OTP** — users enter their email, receive a 6-digit code, and are signed in automatically. New accounts are created on first sign-in, so there is no separate signup page.
 
-Copy the project URL and public/anon key from the Supabase API settings.
+1. In **Authentication → Sign In / Up**, enable **Email** and leave **Confirm email** enabled.
+2. New Supabase projects no longer ship a usable built-in email service, so you **must configure Custom SMTP** under **Authentication → Emails** — otherwise OTP emails fail with `Error sending magic link email`.
+   - A free option is [Resend](https://resend.com): add and verify a domain you own (SPF/DKIM records), then enter `smtp.resend.com` / port `587` / username `resend` / your `re_...` API key as the password, and a sender address on your verified domain (e.g. `noreply@yourdomain.com`).
+   - For quick testing before DNS verifies, Resend's `onboarding@resend.dev` sender works but only delivers to the email address you registered with Resend.
 
-### 3. Configure email OTP
+### 3. Configure environment variables
 
-Kridavana uses a six-digit email OTP instead of a confirmation link.
-
-In:
-
-```text
-Supabase → Authentication → Emails → Templates → Confirm signup
+```bash
+cp .env.example .env.local
 ```
 
-use the following template:
+Fill in:
 
-```html
-<h2>Kridavana</h2>
-<p>Verify your email</p>
-<p>Your verification code is:</p>
-<h1 style="letter-spacing: 4px;">{{ .Token }}</h1>
-<p>Enter this code in Kridavana to verify your account.</p>
-<p>If you didn't create a Kridavana account, you can ignore this email.</p>
-```
+| Variable | Description |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL (Settings → API) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase public `anon` key (Settings → API) |
+| `THEGAMESDB_API_KEY` | TheGamesDB API key (https://thegamesdb.net → API Access). Server-side only — never prefix with `NEXT_PUBLIC_` |
 
-Supabase generates and validates the OTP. Kridavana does not store verification codes.
+Never commit `.env.local` — it is already gitignored.
 
-### 4. Configure TheGamesDB
-
-Create an account at https://thegamesdb.net and generate an API key.
-
-The key is used only on the server and must never be exposed to the browser.
-
-### 5. Environment variables
-
-Create `.env.local`:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-THEGAMESDB_API_KEY=your_thegamesdb_api_key
-```
-
-Do not prefix `THEGAMESDB_API_KEY` with `NEXT_PUBLIC_`.
-
-### 6. Run locally
+### 4. Run it
 
 ```bash
 npm run dev
 ```
 
-Open:
+Open http://localhost:3000, enter your email, and sign in with the 6-digit code you receive. Then search a game from the Diary page to add your first log.
 
-```text
-http://localhost:3000
-```
+## Scripts
 
-Create an account, verify your email, and start logging games.
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the development server |
+| `npm run build` | Create a production build |
+| `npm start` | Run the production build |
+| `npm run lint` | Run the linter |
 
 ## Project Structure
 
 ```text
-app/
-├── page.tsx
-├── login/
-│   └── page.tsx
-├── signup/
-│   └── page.tsx
-└── verify-email/
-    └── page.tsx
-
-lib/
-├── supabase/
-└── thegamesdb.ts
-
-supabase/
-├── schema.sql
-└── migrations/
-    └── 001_thegamesdb.sql
+app/                  Next.js App Router pages and API routes
+components/           React components (UI primitives in components/ui)
+lib/                  Server helpers (Supabase clients, TheGamesDB adapter, auth)
+supabase/             Database schema and migrations
 ```
 
-## Deployment
+## License
 
-Kridavana is designed to deploy on Vercel.
-
-1. Push the repository to GitHub.
-2. Import the repository into Vercel.
-3. Add the required environment variables.
-4. Deploy.
-
-## Status
-
-Kridavana is currently under active development.
-
-## Author
-
-LOHITH G
-
+MIT

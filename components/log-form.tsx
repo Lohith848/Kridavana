@@ -2,15 +2,19 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import RatingMeter from '@/components/ui/rating-meter';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 const STATUSES = [
-  { value: 'backlog', label: 'Backlog' },
-  { value: 'wishlist', label: 'Wishlist' },
-  { value: 'playing', label: 'Playing' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'on_hold', label: 'On hold' },
-  { value: 'dropped', label: 'Dropped' }
+  { value: 'backlog', label: 'Backlog', dot: 'bg-muted' },
+  { value: 'wishlist', label: 'Wishlist', dot: 'bg-muted' },
+  { value: 'playing', label: 'Playing', dot: 'bg-teal' },
+  { value: 'completed', label: 'Completed', dot: 'bg-amber' },
+  { value: 'on_hold', label: 'On hold', dot: 'bg-muted' },
+  { value: 'dropped', label: 'Dropped', dot: 'bg-rose' }
 ];
 
 type ExistingLog = {
@@ -85,105 +89,129 @@ export default function LogForm({ gameId, existing }: { gameId: number; existing
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 rounded-card border border-border bg-surface p-5">
+    <motion.form
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] as const }}
+      onSubmit={handleSubmit}
+      className="space-y-6 rounded-card border border-hairline bg-surface p-6 shadow-card"
+    >
+      {/* Status */}
       <div>
-        <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-muted">Status</label>
+        <label className="mb-3 block font-mono text-xs uppercase tracking-wider text-muted">Status</label>
         <div className="flex flex-wrap gap-2">
-          {STATUSES.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              onClick={() => setStatus(s.value)}
-              className={`rounded-full border px-3 py-1 text-sm transition-colors ${
-                status === s.value
-                  ? 'border-accent bg-accent/10 text-accent'
-                  : 'border-border text-muted hover:text-text'
-              }`}
-            >
-              {s.label}
-            </button>
-          ))}
+          {STATUSES.map((s) => {
+            const isSelected = status === s.value;
+            return (
+              <button
+                key={s.value}
+                type="button"
+                onClick={() => setStatus(s.value)}
+                className={`
+                  inline-flex items-center gap-1.5 rounded-pill border px-3 py-1.5 text-xs font-medium transition-all duration-200
+                  ${isSelected
+                    ? 'border-amber bg-amber/10 text-amber shadow-[0_0_0_1px_rgba(232,163,61,0.2)]'
+                    : 'border-hairline bg-surfaceRaised/40 text-muted hover:border-cream/30 hover:text-cream'
+                  }
+                `}
+              >
+                <span className={`inline-block h-1.5 w-1.5 rounded-pill ${s.dot}`} />
+                <span>{s.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-muted">Platform</label>
-          <input
+          <label className="mb-2 block font-mono text-xs uppercase tracking-wider text-muted">Platform</label>
+          <Input
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
             placeholder="e.g. PS5, PC, Switch"
-            className="w-full rounded border border-border bg-surfaceRaised px-3 py-2 text-sm text-text placeholder:text-muted focus:border-accent"
           />
         </div>
         <div>
-          <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-muted">Hours played</label>
-          <input
+          <label className="mb-2 block font-mono text-xs uppercase tracking-wider text-muted">Hours played</label>
+          <Input
             type="number"
             step="0.5"
             value={hours}
             onChange={(e) => setHours(e.target.value)}
             placeholder="0"
-            className="w-full rounded border border-border bg-surfaceRaised px-3 py-2 text-sm text-text placeholder:text-muted focus:border-accent"
           />
         </div>
         <div>
-          <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-muted">Started</label>
-          <input
+          <label className="mb-2 block font-mono text-xs uppercase tracking-wider text-muted">Started</label>
+          <Input
             type="date"
             value={startedOn}
             onChange={(e) => setStartedOn(e.target.value)}
-            className="w-full rounded border border-border bg-surfaceRaised px-3 py-2 text-sm text-text focus:border-accent"
           />
         </div>
         <div>
-          <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-muted">Finished</label>
-          <input
+          <label className="mb-2 block font-mono text-xs uppercase tracking-wider text-muted">Finished</label>
+          <Input
             type="date"
             value={finishedOn}
             onChange={(e) => setFinishedOn(e.target.value)}
-            className="w-full rounded border border-border bg-surfaceRaised px-3 py-2 text-sm text-text focus:border-accent"
           />
         </div>
       </div>
 
       <div>
-        <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-muted">Rating</label>
+        <label className="mb-3 block font-mono text-xs uppercase tracking-wider text-muted">Rating</label>
         <RatingMeter value={rating} onChange={setRating} />
       </div>
 
       <div>
-        <label className="mb-2 block font-mono text-xs uppercase tracking-wide text-muted">Review</label>
+        <label className="mb-2 block font-mono text-xs uppercase tracking-wider text-muted">Review</label>
         <textarea
           value={review}
           onChange={(e) => setReview(e.target.value)}
           rows={4}
           placeholder="What did you think?"
-          className="w-full rounded border border-border bg-surfaceRaised px-3 py-2 text-sm text-text placeholder:text-muted focus:border-accent"
+          className="w-full min-h-[96px] resize-y rounded-lg border border-hairline bg-surfaceRaised px-3 py-2.5 text-sm text-cream placeholder:text-muted transition-all duration-150 outline-none focus:border-amber focus:shadow-[0_0_0_3px_rgba(232,163,61,0.15)]"
         />
       </div>
 
-      {error && <p className="text-sm text-red-400">{error}</p>}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            className="rounded-lg border border-rose/30 bg-rose/10 px-4 py-3"
+          >
+            <p className="text-xs font-medium text-rose">{error}</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      <div className="flex items-center gap-3">
-        <button
+      <div className="flex items-center gap-3 pt-2">
+        <Button
           type="submit"
           disabled={saving}
-          className="rounded-card bg-accent px-5 py-2 font-mono text-sm font-medium text-bg hover:bg-accent/90 disabled:opacity-60"
+          variant="primary"
+          size="sm"
+          className="shadow-glow"
         >
           {saving ? 'Saving…' : existing ? 'Update entry' : 'Save to diary'}
-        </button>
+        </Button>
         {existing && (
-          <button
+          <Button
             type="button"
             onClick={handleDelete}
             disabled={saving}
-            className="rounded-card border border-dropped/40 px-4 py-2 font-mono text-sm text-dropped hover:bg-dropped/10 disabled:opacity-60"
+            variant="ghost"
+            size="sm"
+            className="text-rose hover:text-rose hover:bg-rose/10"
           >
             Delete entry
-          </button>
+          </Button>
         )}
       </div>
-    </form>
+    </motion.form>
   );
 }
