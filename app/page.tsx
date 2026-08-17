@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/server';
 import PosterCard from '@/components/poster-card';
 import GameCard from '@/components/game-card';
-import { ArrowRight, Plus, Flame } from 'lucide-react';
+import { ArrowRight, Plus, Flame, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MotionDiv, MotionSection } from '@/components/ui/motion';
@@ -62,7 +62,7 @@ export default async function HomePage() {
     { 
       label: 'Average rating', 
       value: avgRating ?? '—',
-      icon: () => <span className="text-amber">★</span>,
+      icon: Star,
       color: 'text-amber'
     }
   ];
@@ -137,11 +137,7 @@ export default async function HomePage() {
                   <div className="absolute inset-0 bg-gradient-to-br from-amber/[0.02] to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                   <div className="relative flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surfaceRaised border border-hairline">
-                      {typeof Icon === 'string' ? (
-                        <span className="text-lg">{Icon}</span>
-                      ) : (
-                        <Icon className={`h-5 w-5 ${stat.color}`} />
-                      )}
+                      <Icon className={`h-5 w-5 ${stat.color}`} />
                     </div>
                     <div>
                       <p className="font-mono text-2xl font-medium text-amber">{stat.value}</p>
@@ -225,7 +221,7 @@ export default async function HomePage() {
                       gameId={log.games.thegamesdb_id}
                       name={log.games.name}
                       coverUrl={log.games.cover_url}
-                      meta={`${log.platform ? `${log.platform} · ` : ''}${log.hours_played ? `${log.hours_played}h · ` : ''}${log.finished_on ? new Date(log.finished_on).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'Finished'}`}
+                      meta={`${log.platform ? `${log.platform} · ` : ''}${log.hours_played ? `${log.hours_played}h · ` : ''}${log.finished_on ? new Date(log.finished_on).toLocaleDateString('en-US') : ''}`}
                       rating={log.rating}
                     />
                   </MotionDiv>
