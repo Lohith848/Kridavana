@@ -1,8 +1,8 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
 import { Heart, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { MotionDiv, MotionButton } from '@/components/ui/motion';
 
 export type PosterCardProps = {
   gameId: number;
@@ -30,7 +30,7 @@ export default function PosterCard({
       href={`/game/${gameId}`}
       className="group flex flex-col gap-2"
     >
-      <motion.div
+      <MotionDiv
         className="relative aspect-[3/4] w-full overflow-hidden rounded-cover border border-hairline bg-surfaceRaised transition-all duration-300 ease-out group-hover:border-amber/40 group-hover:shadow-card"
         whileHover={{ y: -4, scale: 1.02 }}
         transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -54,7 +54,7 @@ export default function PosterCard({
 
         {/* Favorite button */}
         {onFavorite && (
-          <motion.button
+          <MotionButton
             initial={{ opacity: 0, scale: 0.8 }}
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
@@ -70,7 +70,7 @@ export default function PosterCard({
             )}
           >
             <Heart className={cn("h-3.5 w-3.5", isFavorite && "fill-current")} />
-          </motion.button>
+          </MotionButton>
         )}
 
         {/* Rating badge */}
@@ -80,7 +80,7 @@ export default function PosterCard({
             {rating.toFixed(1)}
           </div>
         )}
-      </motion.div>
+      </MotionDiv>
 
       <div className="px-0.5">
         <h3 className="truncate font-body text-sm font-medium text-cream transition-colors duration-150 group-hover:text-amber">
