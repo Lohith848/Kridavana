@@ -107,3 +107,8 @@ supabase/             Database schema and migrations
 ## License
 
 MIT
+
+
+## Author 
+
+Lohith G.
